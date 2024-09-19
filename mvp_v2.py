@@ -37,33 +37,36 @@ load_dotenv()
 
 # Resto do seu código...
 try:
+    # Obter o dicionário de secrets do Streamlit
     service_account_info = st.secrets["google_service_account"]
+    
+    # Criar as credenciais diretamente do dicionário
     credentials = service_account.Credentials.from_service_account_info(
         service_account_info,
         scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
     
-    # Refresh the credentials
-    request = Request()
-    credentials.refresh(request)
+    # Atualizar as credenciais, se necessário
+    if credentials.expired:
+        credentials.refresh(Request())
     
     logger.info("Credenciais carregadas e atualizadas com sucesso")
+    logger.info(f"Tipo de credenciais: {type(credentials)}")
+    logger.info(f"Credenciais válidas: {credentials.valid}")
+    logger.info(f"Credenciais expiradas: {credentials.expired}")
+    logger.info(f"Scopes das credenciais: {credentials.scopes}")
+    
+    # Configurar a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/google_credentials.json"
+    
+    # Inicializar o modelo Gemini
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3)
+    logger.info("Modelo Gemini inicializado com sucesso")
+
 except Exception as e:
     logger.error(f"Erro ao carregar ou atualizar credenciais: {e}")
     st.error(f"Erro de autenticação: {str(e)}. Por favor, verifique as credenciais.")
     st.stop()
-
-
-# Crie um arquivo temporário com as credenciais
-temp_credentials_path = "/tmp/google_credentials.json"
-with open(temp_credentials_path, "w") as f:
-    json.dump(st.secrets["google_service_account"], f)
-
-# Configure a variável de ambiente
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_credentials_path
-
-# Agora, ao inicializar o ChatGoogleGenerativeAI, não passe as credenciais explicitamente
-llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
 
 # Função para contar tokens
 def num_tokens_from_string(string: str, model_name: str = "gpt-3.5-turbo") -> int:
