@@ -20,14 +20,6 @@ from google.auth.transport.requests import Request
 import google.auth
 from google.auth.exceptions import DefaultCredentialsError
 
-# Tentativa de importar google.cloud.storage
-try:
-    from google.cloud import storage
-    storage_available = True
-except ImportError:
-    storage_available = False
-    st.warning("A biblioteca google-cloud-storage não está instalada. Algumas funcionalidades podem estar limitadas.")
-    
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -60,32 +52,21 @@ try:
     
     # Verificar o tipo de credenciais
     logger.info(f"Tipo de credenciais: {type(credentials)}")
+    logger.info(f"Projeto ID: {project_id}")
+    st.success(f"Credenciais carregadas com sucesso para o projeto: {project_id}")
 
 except Exception as e:
     logger.error(f"Erro ao carregar credenciais: {e}")
-    st.error("Erro ao carregar credenciais. Por favor, verifique a configuração.")
+    st.error(f"Erro ao carregar credenciais: {str(e)}. Por favor, verifique a configuração.")
     st.stop()
 
-# Verificar se as credenciais estão funcionando
-if storage_available:
-    try:
-        # Tente fazer uma chamada simples para a API do Google Cloud
-        client = storage.Client(credentials=credentials)
-        buckets = list(client.list_buckets(max_results=1))
-        logger.info("Credenciais verificadas com sucesso")
-    except Exception as e:
-        logger.error(f"Erro ao verificar credenciais: {e}")
-        st.error("Erro ao verificar credenciais. Por favor, verifique a configuração.")
-        st.stop()
-else:
-    logger.warning("Não foi possível verificar as credenciais devido à falta da biblioteca google-cloud-storage")
 # Inicializar o modelo Gemini com as credenciais carregadas
 try:
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3, credentials=credentials)
     logger.info("Modelo Gemini inicializado com sucesso")
 except Exception as e:
     logger.error(f"Erro ao inicializar o modelo Gemini: {e}")
-    st.error("Erro ao inicializar o modelo de IA. Por favor, tente novamente mais tarde.")
+    st.error(f"Erro ao inicializar o modelo de IA: {str(e)}. Por favor, tente novamente mais tarde.")
     st.stop()
 
 # Função para contar tokens
