@@ -457,10 +457,12 @@ with col2:
             st.session_state.user_input = ("Me ajude a criar um treinamento de (...) com ferramentas e uma lógica de "
                                            "apresentação. Destrinche os tópicos com conteúdos mais práticos e aplicáveis.")
     with col_c:
-        if st.button("Estratégia de Marketing"):
-            st.session_state.user_input = ("Preciso de uma estratégia de marketing para aumentar a visibilidade e "
-                                           "engajamento do nosso produto. Inclua ideias inovadoras que possam ser "
-                                           "implementadas rapidamente e que aproveitem as tendências atuais do mercado.")
+        if st.button("Comparativo de produto"):
+            st.session_state.user_input = ("Quero construir uma abordagem de vendas para uma (inserir modelo do produto) " 
+                                           "considerando todas as etapas, desde a abordagem até o fechamento e considerando " 
+                                           "os principais diferenciais do produto. Foque nas perguntas de pesquisa e crie um " 
+                                           "caderno de objeções, contornando as principais com relação a produtos similares "
+                                           "do (produto a ser comparado).")
 
 # Inicializar o estado da sessão para a entrada do usuário
 if 'user_input' not in st.session_state:
@@ -520,11 +522,13 @@ with st.container():
     st.write("Histórico:")
     chat_container = st.container()
     with chat_container:
-        for role, message in chat_history:
-            if role == 'user':
-                st.markdown(f"<div class='user-message'>Usuário: {message}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div class='agent-message'>Agente: {message}</div>", unsafe_allow_html=True)
+        # Exibir pergunta antes da resposta
+        for i in range(0, len(chat_history), 2):
+            user_message = chat_history[i]
+            agent_message = chat_history[i+1] if i+1 < len(chat_history) else ('agent', '')
+            
+            st.markdown(f"<div class='agent-message'>Agente: {agent_message[1]}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='user-message'>Usuário: {user_message[1]}</div>", unsafe_allow_html=True)
 
 # Script para tornar a barra lateral responsiva em dispositivos móveis
 st.markdown("""
