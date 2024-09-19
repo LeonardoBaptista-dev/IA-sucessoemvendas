@@ -37,19 +37,30 @@ load_dotenv()
 
 # Resto do seu código...
 try:
-    # Carregando diretamente do st.secrets
+    # Obtém o dicionário de secrets do Streamlit
     service_account_info = st.secrets["google_service_account"]
     
-    # Converta o dicionário para uma string JSON
-    service_account_info_str = json.dumps(service_account_info)
+    # Cria um dicionário com apenas os campos necessários
+    credentials_dict = {
+        "type": service_account_info["type"],
+        "project_id": service_account_info["project_id"],
+        "private_key_id": service_account_info["private_key_id"],
+        "private_key": service_account_info["private_key"],
+        "client_email": service_account_info["client_email"],
+        "client_id": service_account_info["client_id"],
+        "auth_uri": service_account_info["auth_uri"],
+        "token_uri": service_account_info["token_uri"],
+        "auth_provider_x509_cert_url": service_account_info["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": service_account_info["client_x509_cert_url"]
+    }
     
-    # Crie as credenciais a partir da string JSON
+    # Cria as credenciais a partir do dicionário
     credentials = service_account.Credentials.from_service_account_info(
-        json.loads(service_account_info_str),
+        credentials_dict,
         scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
     
-    project_id = service_account_info.get("project_id")
+    project_id = service_account_info["project_id"]
     
     logger.info("Credenciais carregadas com sucesso")
     logger.info(f"Tipo de credenciais: {type(credentials)}")
