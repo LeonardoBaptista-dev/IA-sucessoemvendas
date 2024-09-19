@@ -37,49 +37,33 @@ load_dotenv()
 
 # Resto do seu código...
 try:
-    # Obtém o dicionário de secrets do Streamlit
     service_account_info = st.secrets["google_service_account"]
-    
-    # Cria um dicionário com apenas os campos necessários
-    credentials_dict = {
-        "type": service_account_info["type"],
-        "project_id": service_account_info["project_id"],
-        "private_key_id": service_account_info["private_key_id"],
-        "private_key": service_account_info["private_key"],
-        "client_email": service_account_info["client_email"],
-        "client_id": service_account_info["client_id"],
-        "auth_uri": service_account_info["auth_uri"],
-        "token_uri": service_account_info["token_uri"],
-        "auth_provider_x509_cert_url": service_account_info["auth_provider_x509_cert_url"],
-        "client_x509_cert_url": service_account_info["client_x509_cert_url"]
-    }
-    
-    # Cria as credenciais a partir do dicionário
     credentials = service_account.Credentials.from_service_account_info(
-        credentials_dict,
+        service_account_info,
         scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
     
-    project_id = service_account_info["project_id"]
+    # Refresh the credentials
+    request = Request()
+    credentials.refresh(request)
     
-    logger.info("Credenciais carregadas com sucesso")
-    logger.info(f"Tipo de credenciais: {type(credentials)}")
-    logger.info(f"Projeto ID: {project_id}")
-    
+    logger.info("Credenciais carregadas e atualizadas com sucesso")
 except Exception as e:
-    logger.error(f"Erro ao carregar credenciais: {e}")
-    st.error(f"Erro ao carregar credenciais: {str(e)}. Por favor, verifique a configuração.")
+    logger.error(f"Erro ao carregar ou atualizar credenciais: {e}")
+    st.error(f"Erro de autenticação: {str(e)}. Por favor, verifique as credenciais.")
     st.stop()
 
 
-# Inicializar o modelo Gemini com as credenciais carregadas
-try:
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3, credentials=credentials)
-    logger.info("Modelo Gemini inicializado com sucesso")
-except Exception as e:
-    logger.error(f"Erro ao inicializar o modelo Gemini: {e}")
-    st.error(f"Erro ao inicializar o modelo de IA: {str(e)}. Por favor, tente novamente mais tarde.")
-    st.stop()
+# Crie um arquivo temporário com as credenciais
+temp_credentials_path = "/tmp/google_credentials.json"
+with open(temp_credentials_path, "w") as f:
+    json.dump(st.secrets["google_service_account"], f)
+
+# Configure a variável de ambiente
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_credentials_path
+
+# Agora, ao inicializar o ChatGoogleGenerativeAI, não passe as credenciais explicitamente
+llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
 
 # Função para contar tokens
 def num_tokens_from_string(string: str, model_name: str = "gpt-3.5-turbo") -> int:
