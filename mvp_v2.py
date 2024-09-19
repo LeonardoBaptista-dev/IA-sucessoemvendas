@@ -36,17 +36,15 @@ set_verbose(True)
 load_dotenv()
 
 # Resto do seu código...
-
-# Tentar carregar as credenciais
 try:
     # Primeiro, tente carregar do Streamlit Secrets
     if "google_service_account" in st.secrets:
-        service_account_info = json.loads(st.secrets["google_service_account"])
+        service_account_info = st.secrets["google_service_account"]
         credentials = service_account.Credentials.from_service_account_info(
             service_account_info,
             scopes=["https://www.googleapis.com/auth/cloud-platform"]
         )
-        project_id = service_account_info["project_id"]
+        project_id = service_account_info.get("project_id")
         logger.info("Credenciais carregadas do Streamlit Secrets")
     else:
         # Se não encontrar nos Secrets, tente usar as credenciais padrão
@@ -66,6 +64,7 @@ except Exception as e:
     logger.error(f"Erro ao carregar credenciais: {e}")
     st.error(f"Erro ao carregar credenciais: {str(e)}. Por favor, verifique a configuração.")
     st.stop()
+
 
 # Inicializar o modelo Gemini com as credenciais carregadas
 try:
