@@ -37,35 +37,48 @@ load_dotenv()
 
 # Resto do seu código...
 try:
-    # Obter o dicionário de secrets do Streamlit
+    # Obtém o dicionário de secrets do Streamlit
     service_account_info = st.secrets["google_service_account"]
     
-    # Criar as credenciais diretamente do dicionário
+    # Cria um dicionário com apenas os campos necessários
+    credentials_dict = {
+        "type": service_account_info["type"],
+        "project_id": service_account_info["project_id"],
+        "private_key_id": service_account_info["private_key_id"],
+        "private_key": service_account_info["private_key"],
+        "client_email": service_account_info["client_email"],
+        "client_id": service_account_info["client_id"],
+        "auth_uri": service_account_info["auth_uri"],
+        "token_uri": service_account_info["token_uri"],
+        "auth_provider_x509_cert_url": service_account_info["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": service_account_info["client_x509_cert_url"]
+    }
+    
+    # Cria as credenciais a partir do dicionário
     credentials = service_account.Credentials.from_service_account_info(
-        service_account_info,
+        credentials_dict,
         scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
     
-    # Atualizar as credenciais, se necessário
-    if credentials.expired:
-        credentials.refresh(Request())
+    project_id = service_account_info["project_id"]
     
-    logger.info("Credenciais carregadas e atualizadas com sucesso")
+    logger.info("Credenciais carregadas com sucesso")
     logger.info(f"Tipo de credenciais: {type(credentials)}")
-    logger.info(f"Credenciais válidas: {credentials.valid}")
-    logger.info(f"Credenciais expiradas: {credentials.expired}")
-    logger.info(f"Scopes das credenciais: {credentials.scopes}")
+    logger.info(f"Projeto ID: {project_id}")
     
-    # Configurar a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/google_credentials.json"
-    
-    # Inicializar o modelo Gemini
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3)
-    logger.info("Modelo Gemini inicializado com sucesso")
-
 except Exception as e:
-    logger.error(f"Erro ao carregar ou atualizar credenciais: {e}")
-    st.error(f"Erro de autenticação: {str(e)}. Por favor, verifique as credenciais.")
+    logger.error(f"Erro ao carregar credenciais: {e}")
+    st.error(f"Erro ao carregar credenciais: {str(e)}. Por favor, verifique a configuração.")
+    st.stop()
+
+
+# Inicializar o modelo Gemini com as credenciais carregadas
+try:
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3, credentials=credentials)
+    logger.info("Modelo Gemini inicializado com sucesso")
+except Exception as e:
+    logger.error(f"Erro ao inicializar o modelo Gemini: {e}")
+    st.error(f"Erro ao inicializar o modelo de IA: {str(e)}. Por favor, tente novamente mais tarde.")
     st.stop()
 
 # Função para contar tokens
@@ -530,3 +543,6 @@ st.markdown("""
 
 if __name__ == "__main__":
     logger.info("Aplicação iniciada")
+
+
+
