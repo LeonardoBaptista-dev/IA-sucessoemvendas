@@ -418,126 +418,128 @@ def new_chat():
     st.session_state.chats[chat_id] = {'date': current_date, 'messages': [], 'title': "Novo Chat"}
     st.session_state.current_chat_id = chat_id
     logger.info(f"Novo chat criado: {chat_id}")
+def main():
 
 # Barra lateral
-with st.sidebar:
-    st.button("Novo Chat", on_click=new_chat)
-    st.markdown("---")
-    st.markdown("### Chats Anteriores")
-    for chat_id, chat_data in st.session_state.chats.items():
-        if st.button(f"{chat_data['title']} - {chat_data['date']}", key=chat_id):
-            st.session_state.current_chat_id = chat_id
-            logger.info(f"Usuário mudou para o chat: {chat_id}")
-
-# Conteúdo principal
-col1, col2, col3 = st.columns([1, 1, 1])
-
-with col2:
-    st.image("assets/LOGO SUCESSO EM VENDAS HORIZONTAL AZUL.png", width=300)
-
-# Centralizar o header
-st.markdown("<div class='centered-header'><h1>| Consultor I.A. |</h1></div>", unsafe_allow_html=True)
-st.markdown("<div class='centered-header'><h3>| Especialista em Eletromóveis |</h3></div>", unsafe_allow_html=True)
-
-# Adicionando botões de prompt predefinidos
-col1, col2, col3 = st.columns([1, 5, 1])  # Ajuste para alinhar com o campo de entrada
-
-with col2:
-    col_a, col_b, col_c = st.columns(3)  # Dividir a coluna central em três para os botões
-    with col_a:
-        if st.button("Vender Produto"):
-            st.session_state.user_input = ("Me ajude a vender uma (...), preciso de ideias práticas e ações "
-                                           "aplicáveis para meu time vender esse produto, preciso que enfatize suas "
-                                           "qualidades reais e diferenciais e busque argumentos concisos que "
-                                           "naturalmente me ajudem com possíveis objeções.")
-    with col_b:
-        if st.button("Criar Treinamento"):
-            st.session_state.user_input = ("Me ajude a criar um treinamento de (...) com ferramentas e uma lógica de "
-                                           "apresentação. Destrinche os tópicos com conteúdos mais práticos e aplicáveis.")
-    with col_c:
-        if st.button("Estratégia de Marketing"):
-            st.session_state.user_input = ("Preciso de uma estratégia de marketing para aumentar a visibilidade e "
-                                           "engajamento do nosso produto. Inclua ideias inovadoras que possam ser "
-                                           "implementadas rapidamente e que aproveitem as tendências atuais do mercado.")
-
-# Inicializar o estado da sessão para a entrada do usuário
-if 'user_input' not in st.session_state:
-    st.session_state['user_input'] = ''
-
-# Modificação na parte do formulário de entrada
-with st.form(key='input_form', clear_on_submit=True):
-    col1, col2, col3 = st.columns([1, 5, 1])  # Ajustado para dar mais espaço à coluna central
+    with st.sidebar:
+        st.button("Novo Chat", on_click=new_chat)
+        st.markdown("---")
+        st.markdown("### Chats Anteriores")
+        for chat_id, chat_data in st.session_state.chats.items():
+            if st.button(f"{chat_data['title']} - {chat_data['date']}", key=chat_id):
+                st.session_state.current_chat_id = chat_id
+                logger.info(f"Usuário mudou para o chat: {chat_id}")
+    
+    # Conteúdo principal
+    col1, col2, col3 = st.columns([1, 1, 1])
+    
     with col2:
-        # Capture a entrada do usuário
-        user_input = st.text_input(label='Digite sua mensagem', key='user_input')
-        submit_button = st.form_submit_button(label="Enviar")
-
-if submit_button:
-    st.session_state.user_interactions += 1
-    logger.info(f"Total de interações do usuário: {st.session_state.user_interactions}")
+        st.image("assets/LOGO SUCESSO EM VENDAS HORIZONTAL AZUL.png", width=300)
     
-    # Adicionar mensagem do usuário ao histórico
-    st.session_state.chats[st.session_state.current_chat_id]['messages'].append(('user', user_input))
+    # Centralizar o header
+    st.markdown("<div class='centered-header'><h1>| Consultor I.A. |</h1></div>", unsafe_allow_html=True)
+    st.markdown("<div class='centered-header'><h3>| Especialista em Eletromóveis |</h3></div>", unsafe_allow_html=True)
     
-    # Atualizar o título do chat com base na nova entrada
-    if st.session_state.chats[st.session_state.current_chat_id]['title'] == "Novo Chat":
-        st.session_state.chats[st.session_state.current_chat_id]['title'] = extract_title(user_input)
+    # Adicionando botões de prompt predefinidos
+    col1, col2, col3 = st.columns([1, 5, 1])  # Ajuste para alinhar com o campo de entrada
     
-    # Gerar resposta
-    with st.spinner("Gerando resposta..."):
-        response = generate_response(user_input, context)
+    with col2:
+        col_a, col_b, col_c = st.columns(3)  # Dividir a coluna central em três para os botões
+        with col_a:
+            if st.button("Vender Produto"):
+                st.session_state.user_input = ("Me ajude a vender uma (...), preciso de ideias práticas e ações "
+                                               "aplicáveis para meu time vender esse produto, preciso que enfatize suas "
+                                               "qualidades reais e diferenciais e busque argumentos concisos que "
+                                               "naturalmente me ajudem com possíveis objeções.")
+        with col_b:
+            if st.button("Criar Treinamento"):
+                st.session_state.user_input = ("Me ajude a criar um treinamento de (...) com ferramentas e uma lógica de "
+                                               "apresentação. Destrinche os tópicos com conteúdos mais práticos e aplicáveis.")
+        with col_c:
+            if st.button("Estratégia de Marketing"):
+                st.session_state.user_input = ("Preciso de uma estratégia de marketing para aumentar a visibilidade e "
+                                               "engajamento do nosso produto. Inclua ideias inovadoras que possam ser "
+                                               "implementadas rapidamente e que aproveitem as tendências atuais do mercado.")
+    
+    # Inicializar o estado da sessão para a entrada do usuário
+    if 'user_input' not in st.session_state:
+        st.session_state['user_input'] = ''
+    
+    # Modificação na parte do formulário de entrada
+    with st.form(key='input_form', clear_on_submit=True):
+        col1, col2, col3 = st.columns([1, 5, 1])  # Ajustado para dar mais espaço à coluna central
+        with col2:
+            # Capture a entrada do usuário
+            user_input = st.text_input(label='Digite sua mensagem', key='user_input')
+            submit_button = st.form_submit_button(label="Enviar")
+    
+    if submit_button:
+        st.session_state.user_interactions += 1
+        logger.info(f"Total de interações do usuário: {st.session_state.user_interactions}")
         
-        # Exibir resposta gradualmente
-        typing_container = st.empty()
-        display_typing_response(response, typing_container)
+        # Adicionar mensagem do usuário ao histórico
+        st.session_state.chats[st.session_state.current_chat_id]['messages'].append(('user', user_input))
         
-        # Após exibir, remover a resposta da visualização direta
-        typing_container.empty()
+        # Atualizar o título do chat com base na nova entrada
+        if st.session_state.chats[st.session_state.current_chat_id]['title'] == "Novo Chat":
+            st.session_state.chats[st.session_state.current_chat_id]['title'] = extract_title(user_input)
+        
+        # Gerar resposta
+        with st.spinner("Gerando resposta..."):
+            response = generate_response(user_input, context)
+            
+            # Exibir resposta gradualmente
+            typing_container = st.empty()
+            display_typing_response(response, typing_container)
+            
+            # Após exibir, remover a resposta da visualização direta
+            typing_container.empty()
+        
+        # Adicionar resposta ao histórico
+        st.session_state.chats[st.session_state.current_chat_id]['messages'].append(('agent', response))
+        
+        # Atualizar o contador de tokens e caracteres total
+        interaction_tokens = num_tokens_from_string(user_input) + num_tokens_from_string(response)
+        interaction_chars = count_characters(user_input) + count_characters(response)
+        st.session_state.total_tokens += interaction_tokens
+        st.session_state.total_characters += interaction_chars
+        logger.info(f"Tokens nesta interação: {interaction_tokens}")
+        logger.info(f"Caracteres nesta interação: {interaction_chars}")
+        logger.info(f"Total de tokens acumulados: {st.session_state.total_tokens}")
+        logger.info(f"Total de caracteres acumulados: {st.session_state.total_characters}")
     
-    # Adicionar resposta ao histórico
-    st.session_state.chats[st.session_state.current_chat_id]['messages'].append(('agent', response))
+        # Log de informação sobre o uso do cache
+        cache_key = hashlib.md5((user_input + context[:100]).encode()).hexdigest()
+        if cache_key in st.session_state.response_cache:
+            logger.info("Esta resposta foi recuperada do cache.")
     
-    # Atualizar o contador de tokens e caracteres total
-    interaction_tokens = num_tokens_from_string(user_input) + num_tokens_from_string(response)
-    interaction_chars = count_characters(user_input) + count_characters(response)
-    st.session_state.total_tokens += interaction_tokens
-    st.session_state.total_characters += interaction_chars
-    logger.info(f"Tokens nesta interação: {interaction_tokens}")
-    logger.info(f"Caracteres nesta interação: {interaction_chars}")
-    logger.info(f"Total de tokens acumulados: {st.session_state.total_tokens}")
-    logger.info(f"Total de caracteres acumulados: {st.session_state.total_characters}")
-
-    # Log de informação sobre o uso do cache
-    cache_key = hashlib.md5((user_input + context[:100]).encode()).hexdigest()
-    if cache_key in st.session_state.response_cache:
-        logger.info("Esta resposta foi recuperada do cache.")
-
-# Exibir histórico do chat atual
-chat_history = st.session_state.chats[st.session_state.current_chat_id]['messages']
-with st.container():
-    st.write("Histórico:")
-    chat_container = st.container()
-    with chat_container:
-        for role, message in chat_history:
-            if role == 'user':
-                st.markdown(f"<div class='user-message'>Usuário: {message}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div class='agent-message'>Agente: {message}</div>", unsafe_allow_html=True)
-
-# Script para tornar a barra lateral responsiva em dispositivos móveis
-st.markdown("""
-<script>
-    var sidebar = document.querySelector('.sidebar');
-    var sidebarToggle = document.createElement('button');
-    sidebarToggle.textContent = '☰';
-    sidebarToggle.className = 'sidebar-toggle';
-    document.body.appendChild(sidebarToggle);
-
-    sidebarToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('active');
-    });
-</script>
-""", unsafe_allow_html=True)
+    # Exibir histórico do chat atual
+    chat_history = st.session_state.chats[st.session_state.current_chat_id]['messages']
+    with st.container():
+        st.write("Histórico:")
+        chat_container = st.container()
+        with chat_container:
+            for role, message in chat_history:
+                if role == 'user':
+                    st.markdown(f"<div class='user-message'>Usuário: {message}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<div class='agent-message'>Agente: {message}</div>", unsafe_allow_html=True)
+    
+    # Script para tornar a barra lateral responsiva em dispositivos móveis
+    st.markdown("""
+    <script>
+        var sidebar = document.querySelector('.sidebar');
+        var sidebarToggle = document.createElement('button');
+        sidebarToggle.textContent = '☰';
+        sidebarToggle.className = 'sidebar-toggle';
+        document.body.appendChild(sidebarToggle);
+    
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+        });
+    </script>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     logger.info("Aplicação iniciada")
+    main()
