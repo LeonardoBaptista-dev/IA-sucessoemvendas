@@ -44,7 +44,7 @@ try:
         service_account_info = json.loads(st.secrets["google_service_account"])
         credentials = service_account.Credentials.from_service_account_info(
             service_account_info,
-            scopes=["https://www.googleapis.com/auth/cloud-platform", "https://www.googleapis.com/auth/generative-ai"]
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
         )
         project_id = service_account_info["project_id"]
         logger.info("Credenciais carregadas do Streamlit Secrets")
