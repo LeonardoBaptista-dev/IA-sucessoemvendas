@@ -15,6 +15,8 @@ import logging
 import tiktoken
 import hashlib
 import re
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -26,14 +28,51 @@ set_verbose(True)
 # Carregar variáveis de ambiente
 load_dotenv()
 
-# Defina o caminho do arquivo JSON de credenciais
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r"gen-lang-client-0474694088-b180f255b99d.json"
+# Verifique se estamos no ambiente do Streamlit Sharing
+if 'STREAMLIT_SHARING' in os.environ:
+    # Carregue as credenciais do segredo do Streamlit
+    try:
+        service_account_info = json.loads(st.secrets["google_service_account"])
+        credentials = service_account.Credentials.from_service_account_info(
+            service_account_info,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        project_id = service_account_info["project_id"]
+        logger.info("Credenciais carregadas do Streamlit Secrets")
+    except Exception as e:
+        logger.error(f"Erro ao carregar credenciais do Streamlit Secrets: {e}")
+        raise
+else:
+    # Use o arquivo JSON local
+    try:
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r"gen-lang-client-0474694088-b180f255b99d.json"
+        from google.auth.transport import requests
+        from google.oauth2 import service_account
+        credentials, project_id = service_account.Credentials.from_service_account_file(
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        ), None  # Ajuste o project_id conforme necessário
+        logger.info("Credenciais carregadas do arquivo JSON local")
+    except Exception as e:
+        logger.error(f"Erro ao carregar credenciais do arquivo local: {e}")
+        raise
 
-# Carregar as credenciais da conta de serviço
-credentials, project_id = load_credentials_from_file(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
+# Se as credenciais expiraram, atualize-as
+if credentials.expired and credentials.refresh_token:
+    try:
+        credentials.refresh(Request())
+        logger.info("Credenciais atualizadas com sucesso")
+    except Exception as e:
+        logger.error(f"Erro ao atualizar credenciais: {e}")
+        raise
 
 # Inicializar o modelo Gemini com as credenciais carregadas
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3, credentials=credentials)
+try:
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3, credentials=credentials)
+    logger.info("Modelo Gemini inicializado com sucesso")
+except Exception as e:
+    logger.error(f"Erro ao inicializar o modelo Gemini: {e}")
+    raise
 
 # Função para contar tokens
 def num_tokens_from_string(string: str, model_name: str = "gpt-3.5-turbo") -> int:
