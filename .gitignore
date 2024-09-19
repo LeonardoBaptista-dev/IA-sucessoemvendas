@@ -2,7 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+venv/
+.env
+*.pyc
+__pycache__/
+.DS_Store
+gen-lang-client-0474694088-b180f255b99d.json
 # C extensions
 *.so
 
