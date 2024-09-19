@@ -416,10 +416,10 @@ with st.sidebar:
 col1, col2, col3 = st.columns([1, 1, 1])
 
 with col2:
-    st.image("assets/LOGO.png", width=300)
+    st.image("assets/LOGO SUCESSO EM VENDAS HORIZONTAL AZUL.png", width=300)
 
 # Centralizar o header
-st.markdown("<div class='centered-header'><h1>| Líder de Vendas I.A. |</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='centered-header'><h1>| Consultor I.A. |</h1></div>", unsafe_allow_html=True)
 st.markdown("<div class='centered-header'><h3>| Especialista em Eletromóveis |</h3></div>", unsafe_allow_html=True)
 
 # Adicionando botões de prompt predefinidos
@@ -438,32 +438,14 @@ with col2:
             st.session_state.user_input = ("Me ajude a criar um treinamento de (...) com ferramentas e uma lógica de "
                                            "apresentação. Destrinche os tópicos com conteúdos mais práticos e aplicáveis.")
     with col_c:
-        if st.button("Comparativo de produto"):
-            st.session_state.user_input = ("Quero construir uma abordagem de vendas para uma (inserir modelo do produto) " 
-                                           "considerando todas as etapas, desde a abordagem até o fechamento e considerando " 
-                                           "os principais diferenciais do produto. Foque nas perguntas de pesquisa e crie um " 
-                                           "caderno de objeções, contornando as principais com relação a produtos similares "
-                                           "do (produto a ser comparado).")
+        if st.button("Estratégia de Marketing"):
+            st.session_state.user_input = ("Preciso de uma estratégia de marketing para aumentar a visibilidade e "
+                                           "engajamento do nosso produto. Inclua ideias inovadoras que possam ser "
+                                           "implementadas rapidamente e que aproveitem as tendências atuais do mercado.")
 
 # Inicializar o estado da sessão para a entrada do usuário
 if 'user_input' not in st.session_state:
     st.session_state['user_input'] = ''
-
-# Função para extrair título do chat
-def extract_title(message):
-    # Extrair as primeiras duas ou três palavras significativas
-    words = re.findall(r'\b\w+\b', message)
-    if len(words) >= 2:
-        return f"{words[0]} {words[1]}..."
-    return "Novo Chat"
-
-# Função para criar um novo chat
-def new_chat():
-    current_date = datetime.now().strftime("%d/%m/%Y")
-    chat_id = f"chat_{len(st.session_state.chats) + 1}"
-    st.session_state.chats[chat_id] = {'date': current_date, 'messages': [], 'title': "Novo Chat"}
-    st.session_state.current_chat_id = chat_id
-    logger.info(f"Novo chat criado: {chat_id}")
 
 # Modificação na parte do formulário de entrada
 with st.form(key='input_form', clear_on_submit=True):
@@ -512,20 +494,18 @@ if submit_button:
     cache_key = hashlib.md5((user_input + context[:100]).encode()).hexdigest()
     if cache_key in st.session_state.response_cache:
         logger.info("Esta resposta foi recuperada do cache.")
-        
+
 # Exibir histórico do chat atual
 chat_history = st.session_state.chats[st.session_state.current_chat_id]['messages']
 with st.container():
     st.write("Histórico:")
     chat_container = st.container()
     with chat_container:
-        # Exibir pergunta antes da resposta
-        for i in range(0, len(chat_history), 2):
-            user_message = chat_history[i]
-            agent_message = chat_history[i+1] if i+1 < len(chat_history) else ('agent', '')
-            
-            st.markdown(f"<div class='agent-message'>Agente: {agent_message[1]}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='user-message'>Usuário: {user_message[1]}</div>", unsafe_allow_html=True)
+        for role, message in chat_history:
+            if role == 'user':
+                st.markdown(f"<div class='user-message'>Usuário: {message}</div>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<div class='agent-message'>Agente: {message}</div>", unsafe_allow_html=True)
 
 # Script para tornar a barra lateral responsiva em dispositivos móveis
 st.markdown("""
