@@ -17,6 +17,9 @@ import hashlib
 import re
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+import google.auth
+from google.auth.exceptions import DefaultCredentialsError
+from google.cloud import storage
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -28,29 +31,44 @@ set_verbose(True)
 # Carregar variáveis de ambiente
 load_dotenv()
 
-# Carregar credenciais do Streamlit Secrets
+# Tentar carregar as credenciais
 try:
-    service_account_info = json.loads(st.secrets["google_service_account"])
-    credentials = service_account.Credentials.from_service_account_info(
-        service_account_info,
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
-    project_id = service_account_info["project_id"]
-    logger.info("Credenciais carregadas do Streamlit Secrets")
+    # Primeiro, tente carregar do Streamlit Secrets
+    if "google_service_account" in st.secrets:
+        service_account_info = json.loads(st.secrets["google_service_account"])
+        credentials = service_account.Credentials.from_service_account_info(
+            service_account_info,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        project_id = service_account_info["project_id"]
+        logger.info("Credenciais carregadas do Streamlit Secrets")
+    else:
+        # Se não encontrar nos Secrets, tente usar as credenciais padrão
+        credentials, project_id = google.auth.default()
+        logger.info("Credenciais padrão carregadas")
+
+    # Verificar se as credenciais são válidas
+    if not credentials.valid:
+        credentials.refresh(Request())
+    
+    # Verificar o tipo de credenciais
+    logger.info(f"Tipo de credenciais: {type(credentials)}")
+
 except Exception as e:
-    logger.error(f"Erro ao carregar credenciais do Streamlit Secrets: {e}")
-    st.error("Erro ao carregar credenciais. Por favor, verifique a configuração dos secrets.")
+    logger.error(f"Erro ao carregar credenciais: {e}")
+    st.error("Erro ao carregar credenciais. Por favor, verifique a configuração.")
     st.stop()
 
-# Se as credenciais expiraram, atualize-as
-if credentials.expired and credentials.refresh_token:
-    try:
-        credentials.refresh(Request())
-        logger.info("Credenciais atualizadas com sucesso")
-    except Exception as e:
-        logger.error(f"Erro ao atualizar credenciais: {e}")
-        st.error("Erro ao atualizar credenciais. Por favor, tente novamente mais tarde.")
-        st.stop()
+# Verificar se as credenciais estão funcionando
+try:
+    # Tente fazer uma chamada simples para a API do Google Cloud
+    client = storage.Client(credentials=credentials)
+    buckets = list(client.list_buckets(max_results=1))
+    logger.info("Credenciais verificadas com sucesso")
+except Exception as e:
+    logger.error(f"Erro ao verificar credenciais: {e}")
+    st.error("Erro ao verificar credenciais. Por favor, verifique a configuração.")
+    st.stop()
 
 # Inicializar o modelo Gemini com as credenciais carregadas
 try:
@@ -179,7 +197,9 @@ def generate_response(user_input, context):
     
     model = ChatPromptTemplate.from_template(prompt) | llm
     try:
+        logger.info("Iniciando geração de resposta")
         response = model.invoke({'input': prompt})
+        logger.info("Resposta gerada com sucesso")
         response_content = response.content if hasattr(response, 'content') else str(response)
         
         response_tokens = num_tokens_from_string(response_content)
@@ -197,8 +217,8 @@ def generate_response(user_input, context):
         
         return response_content
     except Exception as e:
-        logger.error(f"Erro ao gerar resposta: {str(e)}")
-        return "Ocorreu um erro ao gerar a resposta. Por favor, tente novamente."
+        logger.error(f"Erro detalhado ao gerar resposta: {str(e)}")
+        return f"Ocorreu um erro ao gerar a resposta: {str(e)}. Por favor, tente novamente."
 
 # Função para exibir a resposta gradualmente como se estivesse digitando
 def display_typing_response(response_text, container):
@@ -521,3 +541,6 @@ st.markdown("""
     });
 </script>
 """, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    logger.info("Aplicação iniciada")
