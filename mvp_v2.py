@@ -1,4 +1,4 @@
-pythonCopiarfrom streamlit_config import set_page_config
+from streamlit_config import set_page_config
 set_page_config()
 
 # Resto das importações
@@ -33,6 +33,8 @@ set_verbose(True)
 
 # Carregar variáveis de ambiente
 load_dotenv()
+
+# Resto do seu código...
 
 # Tentar carregar as credenciais
 try:
