@@ -19,8 +19,15 @@ from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 import google.auth
 from google.auth.exceptions import DefaultCredentialsError
-from google.cloud import storage
 
+# Tentativa de importar google.cloud.storage
+try:
+    from google.cloud import storage
+    storage_available = True
+except ImportError:
+    storage_available = False
+    st.warning("A biblioteca google-cloud-storage não está instalada. Algumas funcionalidades podem estar limitadas.")
+    
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -60,16 +67,18 @@ except Exception as e:
     st.stop()
 
 # Verificar se as credenciais estão funcionando
-try:
-    # Tente fazer uma chamada simples para a API do Google Cloud
-    client = storage.Client(credentials=credentials)
-    buckets = list(client.list_buckets(max_results=1))
-    logger.info("Credenciais verificadas com sucesso")
-except Exception as e:
-    logger.error(f"Erro ao verificar credenciais: {e}")
-    st.error("Erro ao verificar credenciais. Por favor, verifique a configuração.")
-    st.stop()
-
+if storage_available:
+    try:
+        # Tente fazer uma chamada simples para a API do Google Cloud
+        client = storage.Client(credentials=credentials)
+        buckets = list(client.list_buckets(max_results=1))
+        logger.info("Credenciais verificadas com sucesso")
+    except Exception as e:
+        logger.error(f"Erro ao verificar credenciais: {e}")
+        st.error("Erro ao verificar credenciais. Por favor, verifique a configuração.")
+        st.stop()
+else:
+    logger.warning("Não foi possível verificar as credenciais devido à falta da biblioteca google-cloud-storage")
 # Inicializar o modelo Gemini com as credenciais carregadas
 try:
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3, credentials=credentials)
