@@ -37,29 +37,20 @@ load_dotenv()
 
 # Resto do seu código...
 try:
-    # Primeiro, tente carregar do Streamlit Secrets
-    if "google_service_account" in st.secrets:
-        service_account_info = st.secrets["google_service_account"]
-        credentials = service_account.Credentials.from_service_account_info(
-            service_account_info,
-            scopes=["https://www.googleapis.com/auth/cloud-platform"]
-        )
-        project_id = service_account_info.get("project_id")
-        logger.info("Credenciais carregadas do Streamlit Secrets")
-    else:
-        # Se não encontrar nos Secrets, tente usar as credenciais padrão
-        credentials, project_id = google.auth.default()
-        logger.info("Credenciais padrão carregadas")
-
-    # Verificar se as credenciais são válidas
-    if not credentials.valid:
-        credentials.refresh(Request())
+    # Carregando diretamente do st.secrets
+    service_account_info = st.secrets["google_service_account"]
     
-    # Verificar o tipo de credenciais
+    credentials = service_account.Credentials.from_service_account_info(
+        service_account_info,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+    
+    project_id = service_account_info.get("project_id")
+    
+    logger.info("Credenciais carregadas com sucesso")
     logger.info(f"Tipo de credenciais: {type(credentials)}")
     logger.info(f"Projeto ID: {project_id}")
-    st.success(f"Credenciais carregadas com sucesso para o projeto: {project_id}")
-
+    
 except Exception as e:
     logger.error(f"Erro ao carregar credenciais: {e}")
     st.error(f"Erro ao carregar credenciais: {str(e)}. Por favor, verifique a configuração.")
