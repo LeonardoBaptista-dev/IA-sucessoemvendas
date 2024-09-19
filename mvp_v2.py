@@ -1,61 +1,36 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
-from dotenv import load_dotenv
 import streamlit as st
 import json
 import docx
 import PyPDF2
 import os
-from google.auth import load_credentials_from_file
-from langchain.globals import set_verbose
-import tornado.websocket
-import time
-from datetime import datetime
 import logging
 import tiktoken
 import hashlib
 import re
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+import time
+from datetime import datetime
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Definir a verbosidade
-set_verbose(True)
-
-# Carregar variáveis de ambiente
-load_dotenv()
-
-# Verifique se estamos no ambiente do Streamlit Sharing
-if 'STREAMLIT_SHARING' in os.environ:
-    # Carregue as credenciais do segredo do Streamlit
-    try:
-        service_account_info = json.loads(st.secrets["google_service_account"])
-        credentials = service_account.Credentials.from_service_account_info(
-            service_account_info,
-            scopes=["https://www.googleapis.com/auth/cloud-platform"]
-        )
-        project_id = service_account_info["project_id"]
-        logger.info("Credenciais carregadas do Streamlit Secrets")
-    except Exception as e:
-        logger.error(f"Erro ao carregar credenciais do Streamlit Secrets: {e}")
-        raise
-else:
-    # Use o arquivo JSON local
-    try:
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r"gen-lang-client-0474694088-b180f255b99d.json"
-        from google.auth.transport import requests
-        from google.oauth2 import service_account
-        credentials, project_id = service_account.Credentials.from_service_account_file(
-            os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
-            scopes=["https://www.googleapis.com/auth/cloud-platform"]
-        ), None  # Ajuste o project_id conforme necessário
-        logger.info("Credenciais carregadas do arquivo JSON local")
-    except Exception as e:
-        logger.error(f"Erro ao carregar credenciais do arquivo local: {e}")
-        raise
+# Carregar credenciais do Streamlit Secrets
+try:
+    service_account_info = json.loads(st.secrets["google_service_account"])
+    credentials = service_account.Credentials.from_service_account_info(
+        service_account_info,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+    project_id = service_account_info["project_id"]
+    logger.info("Credenciais carregadas do Streamlit Secrets")
+except Exception as e:
+    logger.error(f"Erro ao carregar credenciais do Streamlit Secrets: {e}")
+    st.error("Erro ao carregar credenciais. Por favor, verifique a configuração dos secrets.")
+    st.stop()
 
 # Se as credenciais expiraram, atualize-as
 if credentials.expired and credentials.refresh_token:
@@ -64,7 +39,8 @@ if credentials.expired and credentials.refresh_token:
         logger.info("Credenciais atualizadas com sucesso")
     except Exception as e:
         logger.error(f"Erro ao atualizar credenciais: {e}")
-        raise
+        st.error("Erro ao atualizar credenciais. Por favor, tente novamente mais tarde.")
+        st.stop()
 
 # Inicializar o modelo Gemini com as credenciais carregadas
 try:
@@ -72,7 +48,8 @@ try:
     logger.info("Modelo Gemini inicializado com sucesso")
 except Exception as e:
     logger.error(f"Erro ao inicializar o modelo Gemini: {e}")
-    raise
+    st.error("Erro ao inicializar o modelo de IA. Por favor, tente novamente mais tarde.")
+    st.stop()
 
 # Função para contar tokens
 def num_tokens_from_string(string: str, model_name: str = "gpt-3.5-turbo") -> int:
@@ -84,46 +61,8 @@ def num_tokens_from_string(string: str, model_name: str = "gpt-3.5-turbo") -> in
 def count_characters(text):
     return len(text)
 
-# Função para carregar e processar arquivos JSON
-def load_json(filepath):
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Arquivo JSON não encontrado: {filepath}")
-    
-    try:
-        with open(filepath, 'r') as file:
-            data = json.load(file)
-        return data
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Erro ao decodificar o JSON no arquivo {filepath}: {e}")
-    except Exception as e:
-        raise RuntimeError(f"Erro ao carregar o arquivo JSON {filepath}: {e}")
-
-# Função para carregar e processar arquivos DOCX
-def load_docx(filepath):
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Arquivo DOCX não encontrado: {filepath}")
-    
-    try:
-        doc = docx.Document(filepath)
-        text = "\n".join([p.text for p in doc.paragraphs])
-        return text
-    except Exception as e:
-        raise RuntimeError(f"Erro ao carregar o arquivo DOCX {filepath}: {e}")
-
-# Função para carregar e processar arquivos PDF
-def load_pdf(filepath):
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Arquivo PDF não encontrado: {filepath}")
-    
-    try:
-        with open(filepath, 'rb') as file:
-            reader = PyPDF2.PdfReader(file)
-            text = ""
-            for page in reader.pages:
-                text += page.extract_text() if page.extract_text() else ""
-        return text
-    except Exception as e:
-        raise RuntimeError(f"Erro ao carregar o arquivo PDF {filepath}: {e}")
+# Funções para carregar e processar arquivos (JSON, DOCX, PDF)
+# ... (manter as funções load_json, load_docx, load_pdf como estavam)
 
 # Função para carregar todos os arquivos na pasta materiais
 def load_materials(directory='materiais'):
@@ -131,37 +70,29 @@ def load_materials(directory='materiais'):
     total_tokens = 0
     total_chars = 0
     if not os.path.exists(directory):
-        raise FileNotFoundError(f"Pasta de materiais não encontrada: {directory}")
+        logger.warning(f"Pasta de materiais não encontrada: {directory}")
+        return "", 0, 0
 
     for filename in os.listdir(directory):
         filepath = os.path.join(directory, filename)
-        if filename.endswith('.json'):
-            try:
+        try:
+            if filename.endswith('.json'):
                 content = load_json(filepath)
-                materials.append(content)
-                content_str = str(content)
-                total_tokens += num_tokens_from_string(content_str)
-                total_chars += count_characters(content_str)
-            except Exception as e:
-                logger.error(f"Erro ao carregar arquivo JSON: {e}")
-        elif filename.endswith('.docx'):
-            try:
+            elif filename.endswith('.docx'):
                 content = load_docx(filepath)
-                materials.append(content)
-                total_tokens += num_tokens_from_string(content)
-                total_chars += count_characters(content)
-            except Exception as e:
-                logger.error(f"Erro ao carregar arquivo DOCX: {e}")
-        elif filename.endswith('.pdf'):
-            try:
+            elif filename.endswith('.pdf'):
                 content = load_pdf(filepath)
-                materials.append(content)
-                total_tokens += num_tokens_from_string(content)
-                total_chars += count_characters(content)
-            except Exception as e:
-                logger.error(f"Erro ao carregar arquivo PDF: {e}")
-    
-    materials_text = "\n\n".join(map(str, materials))
+            else:
+                continue
+
+            materials.append(str(content))
+            content_str = str(content)
+            total_tokens += num_tokens_from_string(content_str)
+            total_chars += count_characters(content_str)
+        except Exception as e:
+            logger.error(f"Erro ao carregar arquivo {filename}: {e}")
+
+    materials_text = "\n\n".join(materials)
     logger.info(f"Total de tokens nos materiais: {total_tokens}")
     logger.info(f"Total de caracteres nos materiais: {total_chars}")
     return materials_text, total_tokens, total_chars
@@ -175,14 +106,11 @@ agent_context = (
 
 # Função para gerar a resposta
 def generate_response(user_input, context):
-    # Gerar uma chave única para o cache
     cache_key = hashlib.md5((user_input + context[:100]).encode()).hexdigest()
     
-    # Verificar se a resposta está no cache
     if cache_key in st.session_state.response_cache:
         logger.info("Resposta encontrada no cache")
-        cached_response = st.session_state.response_cache[cache_key]
-        return cached_response
+        return st.session_state.response_cache[cache_key]
 
     prompt = f"{context}\n\nUsuário: {user_input}\nChatbot:"
     input_tokens = num_tokens_from_string(prompt)
@@ -205,7 +133,6 @@ def generate_response(user_input, context):
         logger.info(f"Total de tokens nesta interação: {total_tokens}")
         logger.info(f"Total de caracteres nesta interação: {total_chars}")
         
-        # Armazenar a resposta no cache
         st.session_state.response_cache[cache_key] = response_content
         
         return response_content
@@ -213,9 +140,9 @@ def generate_response(user_input, context):
         logger.error(f"Erro ao gerar resposta: {str(e)}")
         return "Ocorreu um erro ao gerar a resposta. Por favor, tente novamente."
 
-# Função para exibir a resposta gradualmente como se estivesse digitando
+# Função para exibir a resposta gradualmente
 def display_typing_response(response_text, container):
-    typing_speed = 0.01  # Velocidade de digitação (em segundos por caractere)
+    typing_speed = 0.01
     typed_text = ""
     for char in response_text:
         typed_text += char
@@ -224,158 +151,18 @@ def display_typing_response(response_text, container):
 
 # Função para extrair título do chat
 def extract_title(message):
-    # Extrair as primeiras duas ou três palavras significativas
     words = re.findall(r'\b\w+\b', message)
     if len(words) >= 2:
-        return f"{words[0]} {words[1]}"
+        return f"{words[0]} {words[1]}..."
     return "Novo Chat"
 
 # Configurar Streamlit
 st.set_page_config(page_title='Consultor da Sucesso em Vendas', layout="wide")
 
-# Adicionando estilo personalizado para tema claro
-st.markdown(
-    """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    
-    body, .stApp {
-        background-color: #FFFFFF;
-        color: #000000;
-    }
-    
-    @import url('https://fonts.googleapis.com/css2?family=Sofia+Pro:wght@400&display=swap');
-    
-    * {
-        font-family: 'Sofia Pro', sans-serif;
-        color: #000000;
-    }
-    
-    .stImage > img {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-    }
+# Adicionar estilos CSS personalizados
+# ... (manter os estilos CSS como estavam)
 
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-        font-family: 'Sofia Pro', sans-serif;
-        color: #000000;
-        text-align: center;
-        font-weight: bold;
-    }
-
-    .centered-header {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .stTextInput div label {
-        font-family: 'Sofia Pro', sans-serif;
-        color: #000000;
-    }
-
-    .stTextInput div input {
-        font-family: 'Sofia Pro', sans-serif;
-        color: #000000;
-        background-color: #F0F0F0;
-        max-width: 100%;
-        margin: 0 auto;
-    }
-
-    .stButton button {
-        background-color: #E0E0E0;
-        color: #000000;
-        font-weight: bold;
-        font-family: 'Sofia Pro', sans-serif;
-        border-radius: 5px;
-        padding: 10px;
-        border: none;
-    }
-
-    .user-message {
-        background-color: #F0F0F0;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 5px 0;
-    }
-
-    .agent-message {
-        background-color: #E8E8E8;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 5px 0;
-    }
-
-    .scroll-container {
-        max-height: 80vh;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column-reverse;
-    }
-
-    .chat-input {
-        margin-top: 20px;
-        display: flex;
-        justify-content: center;
-    }
-
-    .sidebar .stButton button {
-        width: 100%;
-        margin-bottom: 10px;
-        background-color: #E0E0E0;
-        color: #000000;
-        font-weight: bold;
-        font-family: 'Sofia Pro', sans-serif;
-        border-radius: 5px;
-        padding: 10px;
-        border: none;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-    }
-
-    .stForm div {
-        margin: 0;  /* Remove margens ao redor do formulário */
-        padding: 0;  /* Remove preenchimento ao redor do formulário */
-    }
-
-    /* Estilo para dispositivos móveis */
-    @media (max-width: 768px) {
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: -250px;
-            height: 100vh;
-            width: 250px;
-            background-color: #FFFFFF;
-            transition: 0.3s;
-            z-index: 1000;
-        }
-        .stImage > img {
-            display: block;
-            margin-left: calc(1cm + auto);
-            margin-right: auto;
-        }
-        .sidebar.active {
-            left: 0;
-        }
-
-        .stTextInput div input {
-            max-width: 95%;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# Carregar materiais e definir contexto com indicador de carregamento
+# Carregar materiais e definir contexto
 with st.spinner("Carregando materiais..."):
     try:
         materials_context, materials_tokens, materials_chars = load_materials()
@@ -392,7 +179,7 @@ context_chars = count_characters(context)
 logger.info(f"Total de tokens no contexto completo: {context_tokens}")
 logger.info(f"Total de caracteres no contexto completo: {context_chars}")
 
-# Inicializar o estado da sessão para múltiplos chats
+# Inicializar o estado da sessão
 if 'chats' not in st.session_state:
     current_date = datetime.now().strftime("%d/%m/%Y")
     st.session_state.chats = {'chat_1': {'date': current_date, 'messages': [], 'title': "Novo Chat"}}
@@ -431,15 +218,13 @@ col1, col2, col3 = st.columns([1, 1, 1])
 with col2:
     st.image("assets/LOGO SUCESSO EM VENDAS HORIZONTAL AZUL.png", width=300)
 
-# Centralizar o header
 st.markdown("<div class='centered-header'><h1>| Consultor I.A. |</h1></div>", unsafe_allow_html=True)
 st.markdown("<div class='centered-header'><h3>| Especialista em Eletromóveis |</h3></div>", unsafe_allow_html=True)
 
-# Adicionando botões de prompt predefinidos
-col1, col2, col3 = st.columns([1, 5, 1])  # Ajuste para alinhar com o campo de entrada
-
+# Botões de prompt predefinidos
+col1, col2, col3 = st.columns([1, 5, 1])
 with col2:
-    col_a, col_b, col_c = st.columns(3)  # Dividir a coluna central em três para os botões
+    col_a, col_b, col_c = st.columns(3)
     with col_a:
         if st.button("Vender Produto"):
             st.session_state.user_input = ("Me ajude a vender uma (...), preciso de ideias práticas e ações "
@@ -456,31 +241,10 @@ with col2:
                                            "engajamento do nosso produto. Inclua ideias inovadoras que possam ser "
                                            "implementadas rapidamente e que aproveitem as tendências atuais do mercado.")
 
-# Inicializar o estado da sessão para a entrada do usuário
-if 'user_input' not in st.session_state:
-    st.session_state['user_input'] = ''
-
-# Função para extrair título do chat
-def extract_title(message):
-    # Extrair as primeiras duas ou três palavras significativas
-    words = re.findall(r'\b\w+\b', message)
-    if len(words) >= 2:
-        return f"{words[0]} {words[1]}..."
-    return "Novo Chat"
-
-# Função para criar um novo chat
-def new_chat():
-    current_date = datetime.now().strftime("%d/%m/%Y")
-    chat_id = f"chat_{len(st.session_state.chats) + 1}"
-    st.session_state.chats[chat_id] = {'date': current_date, 'messages': [], 'title': "Novo Chat"}
-    st.session_state.current_chat_id = chat_id
-    logger.info(f"Novo chat criado: {chat_id}")
-
-# Modificação na parte do formulário de entrada
+# Formulário de entrada
 with st.form(key='input_form', clear_on_submit=True):
-    col1, col2, col3 = st.columns([1, 5, 1])  # Ajustado para dar mais espaço à coluna central
+    col1, col2, col3 = st.columns([1, 5, 1])
     with col2:
-        # Capture a entrada do usuário
         user_input = st.text_input(label='Digite sua mensagem', key='user_input')
         submit_button = st.form_submit_button(label="Enviar")
 
@@ -488,28 +252,21 @@ if submit_button:
     st.session_state.user_interactions += 1
     logger.info(f"Total de interações do usuário: {st.session_state.user_interactions}")
     
-    # Adicionar mensagem do usuário ao histórico
     st.session_state.chats[st.session_state.current_chat_id]['messages'].append(('user', user_input))
     
-    # Atualizar o título do chat com base na nova entrada
     if st.session_state.chats[st.session_state.current_chat_id]['title'] == "Novo Chat":
         st.session_state.chats[st.session_state.current_chat_id]['title'] = extract_title(user_input)
     
-    # Gerar resposta
     with st.spinner("Gerando resposta..."):
         response = generate_response(user_input, context)
         
-        # Exibir resposta gradualmente
         typing_container = st.empty()
         display_typing_response(response, typing_container)
         
-        # Após exibir, remover a resposta da visualização direta
         typing_container.empty()
     
-    # Adicionar resposta ao histórico
     st.session_state.chats[st.session_state.current_chat_id]['messages'].append(('agent', response))
     
-    # Atualizar o contador de tokens e caracteres total
     interaction_tokens = num_tokens_from_string(user_input) + num_tokens_from_string(response)
     interaction_chars = count_characters(user_input) + count_characters(response)
     st.session_state.total_tokens += interaction_tokens
@@ -519,10 +276,10 @@ if submit_button:
     logger.info(f"Total de tokens acumulados: {st.session_state.total_tokens}")
     logger.info(f"Total de caracteres acumulados: {st.session_state.total_characters}")
 
-    # Log de informação sobre o uso do cache
     cache_key = hashlib.md5((user_input + context[:100]).encode()).hexdigest()
     if cache_key in st.session_state.response_cache:
         logger.info("Esta resposta foi recuperada do cache.")
+
 # Exibir histórico do chat atual
 chat_history = st.session_state.chats[st.session_state.current_chat_id]['messages']
 with st.container():
