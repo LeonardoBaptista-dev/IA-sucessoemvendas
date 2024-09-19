@@ -40,8 +40,12 @@ try:
     # Carregando diretamente do st.secrets
     service_account_info = st.secrets["google_service_account"]
     
+    # Converta o dicionário para uma string JSON
+    service_account_info_str = json.dumps(service_account_info)
+    
+    # Crie as credenciais a partir da string JSON
     credentials = service_account.Credentials.from_service_account_info(
-        service_account_info,
+        json.loads(service_account_info_str),
         scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
     
