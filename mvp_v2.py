@@ -4,7 +4,8 @@ import streamlit as st
 st.set_page_config(page_title='Consultor da Sucesso em Vendas', layout="wide")
 
 # Resto das importações
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleAuthProvider
+from langchain_google_genai import GoogleAuthProvider
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 import json
