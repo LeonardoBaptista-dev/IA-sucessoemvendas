@@ -75,7 +75,6 @@ def count_characters(text):
 def load_json(filepath):
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Arquivo JSON não encontrado: {filepath}")
-    
     try:
         with open(filepath, 'r') as file:
             data = json.load(file)
@@ -89,7 +88,6 @@ def load_json(filepath):
 def load_docx(filepath):
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Arquivo DOCX não encontrado: {filepath}")
-    
     try:
         doc = docx.Document(filepath)
         text = "\n".join([p.text for p in doc.paragraphs])
@@ -101,7 +99,6 @@ def load_docx(filepath):
 def load_pdf(filepath):
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Arquivo PDF não encontrado: {filepath}")
-    
     try:
         with open(filepath, 'rb') as file:
             reader = PyPDF2.PdfReader(file)
@@ -119,7 +116,6 @@ def load_materials(directory='materiais'):
     total_chars = 0
     if not os.path.exists(directory):
         raise FileNotFoundError(f"Pasta de materiais não encontrada: {directory}")
-
     for filename in os.listdir(directory):
         filepath = os.path.join(directory, filename)
         if filename.endswith('.json'):
@@ -147,7 +143,7 @@ def load_materials(directory='materiais'):
                 total_chars += count_characters(content)
             except Exception as e:
                 logger.error(f"Erro ao carregar arquivo PDF: {e}")
-    
+
     materials_text = "\n\n".join(map(str, materials))
     logger.info(f"Total de tokens nos materiais: {total_tokens}")
     logger.info(f"Total de caracteres nos materiais: {total_chars}")
@@ -164,7 +160,6 @@ agent_context = (
 def generate_response(user_input, context):
     # Gerar uma chave única para o cache
     cache_key = hashlib.md5((user_input + context[:100]).encode()).hexdigest()
-    
     # Verificar se a resposta está no cache
     if cache_key in st.session_state.response_cache:
         logger.info("Resposta encontrada no cache")
@@ -176,10 +171,12 @@ def generate_response(user_input, context):
     input_chars = count_characters(prompt)
     logger.info(f"Tokens na entrada: {input_tokens}")
     logger.info(f"Caracteres na entrada: {input_chars}")
-    
+
     model = ChatPromptTemplate.from_template(prompt) | llm
     try:
+        logger.info("Iniciando geração de resposta")
         response = model.invoke({'input': prompt})
+        logger.info("Resposta gerada com sucesso")
         response_content = response.content if hasattr(response, 'content') else str(response)
         
         response_tokens = num_tokens_from_string(response_content)
@@ -197,8 +194,8 @@ def generate_response(user_input, context):
         
         return response_content
     except Exception as e:
-        logger.error(f"Erro ao gerar resposta: {str(e)}")
-        return "Ocorreu um erro ao gerar a resposta. Por favor, tente novamente."
+        logger.error(f"Erro detalhado ao gerar resposta: {str(e)}")
+        return f"Ocorreu um erro ao gerar a resposta: {str(e)}. Por favor, tente novamente."
 
 # Função para exibir a resposta gradualmente como se estivesse digitando
 def display_typing_response(response_text, container):
@@ -214,165 +211,148 @@ def extract_title(message):
     # Extrair as primeiras duas ou três palavras significativas
     words = re.findall(r'\b\w+\b', message)
     if len(words) >= 2:
-        return f"{words[0]} {words[1]}..."
+        return f"{words[0]} {words[1]}"
     return "Novo Chat"
-
-# Configurar Streamlit
-st.set_page_config(page_title='Consultor da Sucesso em Vendas', layout="wide")
 
 # Adicionando estilo personalizado para tema claro
 st.markdown(
-    """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    
-    body, .stApp {
+"""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+body, .stApp {
+    background-color: #FFFFFF;
+    color: #000000;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Sofia+Pro:wght@400&display=swap');
+
+* {
+    font-family: 'Sofia Pro', sans-serif;
+    color: #000000;
+}
+
+.stImage > img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+    font-family: 'Sofia Pro', sans-serif;
+    color: #000000;
+    text-align: center;
+    font-weight: bold;
+}
+
+.centered-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.stTextInput div label {
+    font-family: 'Sofia Pro', sans-serif;
+    color: #000000;
+}
+
+.stTextInput div input {
+    font-family: 'Sofia Pro', sans-serif;
+    color: #000000;
+    background-color: #F0F0F0;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.stButton button {
+    background-color: #E0E0E0;
+    color: #000000;
+    font-weight: bold;
+    font-family: 'Sofia Pro', sans-serif;
+    border-radius: 5px;
+    padding: 10px;
+    border: none;
+}
+
+.user-message {
+    background-color: #F0F0F0;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 5px 0;
+}
+
+.agent-message {
+    background-color: #E8E8E8;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 5px 0;
+}
+
+.scroll-container {
+    max-height: 80vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.chat-input {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.sidebar .stButton button {
+    width: 100%;
+    margin-bottom: 10px;
+    background-color: #E0E0E0;
+    color: #000000;
+    font-weight: bold;
+    font-family: 'Sofia Pro', sans-serif;
+    border-radius: 5px;
+    padding: 10px;
+    border: none;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #FFFFFF;
+}
+
+.stForm div {
+    margin: 0;  /* Remove margens ao redor do formulário */
+    padding: 0;  /* Remove preenchimento ao redor do formulário */
+}
+
+/* Estilo para dispositivos móveis */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -250px;
+        height: 100vh;
+        width: 250px;
         background-color: #FFFFFF;
-        color: #000000;
+        transition: 0.3s;
+        z-index: 1000;
     }
-    
-    @import url('https://fonts.googleapis.com/css2?family=Sofia+Pro:wght@400&display=swap');
-    
-    * {
-        font-family: 'Sofia Pro', sans-serif;
-        color: #000000;
-    }
-    
     .stImage > img {
         display: block;
-        margin-left: auto;
+        margin-left: calc(1cm + auto);
         margin-right: auto;
     }
-
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-        font-family: 'Sofia Pro', sans-serif;
-        color: #000000;
-        text-align: center;
-        font-weight: bold;
+    .sidebar.active {
+        left: 0;
     }
 
-    .centered-header {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        margin-bottom: 20px;
+    .stTextInput div input {
+        max-width: 95%;
     }
-
-    .stTextInput div label, .stTextArea div label {
-        font-family: 'Sofia Pro', sans-serif;
-        color: #000000;
-    }
-
-    .stTextInput div input, .stTextArea div textarea {
-        font-family: 'Sofia Pro', sans-serif;
-        color: #000000;
-        background-color: #F0F0F0;
-        max-width: 100%;
-        margin: 0 auto;
-        font-size: 16px;
-        line-height: 1.5;
-    }
-
-    .small-input {
-        height: 40px;
-        min-height: 40px;
-        transition: height 0.3s ease-out;
-    }
-
-    .large-input {
-        height: auto;
-        min-height: 100px;
-    }
-
-    .stButton button {
-        background-color: #E0E0E0;
-        color: #000000;
-        font-weight: bold;
-        font-family: 'Sofia Pro', sans-serif;
-        border-radius: 5px;
-        padding: 10px;
-        border: none;
-    }
-
-    .user-message {
-        background-color: #F0F0F0;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 5px 0;
-    }
-
-    .agent-message {
-        background-color: #E8E8E8;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 5px 0;
-    }
-
-    .scroll-container {
-        max-height: 80vh;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column-reverse;
-    }
-
-    .chat-input {
-        margin-top: 20px;
-        display: flex;
-        justify-content: center;
-    }
-
-    .sidebar .stButton button {
-        width: 100%;
-        margin-bottom: 10px;
-        background-color: #E0E0E0;
-        color: #000000;
-        font-weight: bold;
-        font-family: 'Sofia Pro', sans-serif;
-        border-radius: 5px;
-        padding: 10px;
-        border: none;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-    }
-
-    .stForm div {
-        margin: 0;
-        padding: 0;
-    }
-
-    /* Estilo para dispositivos móveis */
-    @media (max-width: 768px) {
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: -250px;
-            height: 100vh;
-            width: 250px;
-            background-color: #FFFFFF;
-            transition: 0.3s;
-            z-index: 1000;
-        }
-        .stImage > img {
-            display: block;
-            margin-left: calc(1cm + auto);
-            margin-right: auto;
-        }
-        .sidebar.active {
-            left: 0;
-        }
-
-        .stTextInput div input, .stTextArea div textarea {
-            max-width: 95%;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
+}
+</style>
+""",
+unsafe_allow_html=True
 )
 
 # Carregar materiais e definir contexto com indicador de carregamento
@@ -406,8 +386,6 @@ if 'total_characters' not in st.session_state:
     st.session_state.total_characters = 0
 if 'response_cache' not in st.session_state:
     st.session_state.response_cache = {}
-if 'user_input' not in st.session_state:
-    st.session_state.user_input = ''
 
 # Função para criar um novo chat
 def new_chat():
@@ -429,18 +407,17 @@ with st.sidebar:
 
 # Conteúdo principal
 col1, col2, col3 = st.columns([1, 1, 1])
-
 with col2:
-    st.image("assets/LOGO.png", width=300)
+    st.image("assets/LOGO SUCESSO EM VENDAS HORIZONTAL AZUL.png", width=300)
 
 # Centralizar o header
-st.markdown("<div class='centered-header'><h1>| Líder de Vendas I.A. |</h1></div>", unsafe_allow_html=True)
-st.markdown("<div class='centered-header'><h3> Especialista em Eletromóveis </h3></div>", unsafe_allow_html=True)
+st.markdown("<div class='centered-header'><h1>| Consultor I.A. |</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='centered-header'><h3>| Especialista em Eletromóveis |</h3></div>", unsafe_allow_html=True)
 
 # Adicionando botões de prompt predefinidos
-col1, col2, col3 = st.columns([1, 5, 1])
+col1, col2, col3 = st.columns([1, 5, 1])  # Ajuste para alinhar com o campo de entrada
 with col2:
-    col_a, col_b, col_c = st.columns(3)
+    col_a, col_b, col_c = st.columns(3)  # Dividir a coluna central em três para os botões
     with col_a:
         if st.button("Vender Produto"):
             st.session_state.user_input = ("Me ajude a vender uma (...), preciso de ideias práticas e ações "
@@ -453,49 +430,34 @@ with col2:
                                            "apresentação. Destrinche os tópicos com conteúdos mais práticos e aplicáveis.")
     with col_c:
         if st.button("Comparativo de produto"):
-            st.session_state.user_input = ("Quero construir uma abordagem de vendas para uma (inserir modelo do produto) " 
-                                           "considerando todas as etapas, desde a abordagem até o fechamento e considerando " 
-                                           "os principais diferenciais do produto. Foque nas perguntas de pesquisa e crie um " 
+            st.session_state.user_input = ("Quero construir uma abordagem de vendas para uma (inserir modelo do produto) "
+                                           "considerando todas as etapas, desde a abordagem até o fechamento e considerando "
+                                           "os principais diferenciais do produto. Foque nas perguntas de pesquisa e crie um "
                                            "caderno de objeções, contornando as principais com relação a produtos similares "
                                            "do (produto a ser comparado).")
 
+# Inicializar o estado da sessão para a entrada do usuário
+if 'user_input' not in st.session_state:
+    st.session_state['user_input'] = ''
+
 # Modificação na parte do formulário de entrada
-with st.form(key='input_form', clear_on_submit=False):
-    col1, col2, col3 = st.columns([1, 5, 1])
+with st.form(key='input_form', clear_on_submit=True):
+    col1, col2, col3 = st.columns([1, 5, 1])  # Ajustado para dar mais espaço à coluna central
     with col2:
-        # Determinar se devemos usar text_input ou text_area
-        if len(st.session_state.user_input.split('\n')) > 1 or len(st.session_state.user_input) > 50:
-            user_input = st.text_area(
-                label='Digite sua mensagem',
-                value=st.session_state.user_input,
-                height=100,  # Altura inicial para múltiplas linhas
-                key='user_input_area',
-                max_chars=1000
-            )
-        else:
-            user_input = st.text_input(
-                label='Digite sua mensagem',
-                value=st.session_state.user_input,
-                key='user_input_field',
-                max_chars=1000
-            )
+        # Capture a entrada do usuário
+        user_input = st.text_input(label='Digite sua mensagem', key='user_input')
         submit_button = st.form_submit_button(label="Enviar")
 
-# Atualizar st.session_state.user_input com o novo valor
-if user_input != st.session_state.user_input:
-    st.session_state.user_input = user_input
-
-if submit_button and user_input.strip():
+if submit_button:
     st.session_state.user_interactions += 1
     logger.info(f"Total de interações do usuário: {st.session_state.user_interactions}")
-    
     # Adicionar mensagem do usuário ao histórico
     st.session_state.chats[st.session_state.current_chat_id]['messages'].append(('user', user_input))
-    
+
     # Atualizar o título do chat com base na nova entrada
     if st.session_state.chats[st.session_state.current_chat_id]['title'] == "Novo Chat":
         st.session_state.chats[st.session_state.current_chat_id]['title'] = extract_title(user_input)
-    
+
     # Gerar resposta
     with st.spinner("Gerando resposta..."):
         response = generate_response(user_input, context)
@@ -506,10 +468,10 @@ if submit_button and user_input.strip():
         
         # Após exibir, remover a resposta da visualização direta
         typing_container.empty()
-    
+
     # Adicionar resposta ao histórico
     st.session_state.chats[st.session_state.current_chat_id]['messages'].append(('agent', response))
-    
+
     # Atualizar o contador de tokens e caracteres total
     interaction_tokens = num_tokens_from_string(user_input) + num_tokens_from_string(response)
     interaction_chars = count_characters(user_input) + count_characters(response)
@@ -524,10 +486,6 @@ if submit_button and user_input.strip():
     cache_key = hashlib.md5((user_input + context[:100]).encode()).hexdigest()
     if cache_key in st.session_state.response_cache:
         logger.info("Esta resposta foi recuperada do cache.")
-    
-    # Limpar o input após o envio
-    st.session_state.user_input = ''
-    st.experimental_rerun()
 
 # Exibir histórico do chat atual
 chat_history = st.session_state.chats[st.session_state.current_chat_id]['messages']
@@ -535,47 +493,16 @@ with st.container():
     st.write("Histórico:")
     chat_container = st.container()
     with chat_container:
-        for i in range(len(chat_history) - 1, -1, -2):
-            if i > 0:
-                user_message = chat_history[i-1]
-                agent_message = chat_history[i]
-            else:
-                user_message = chat_history[i]
-                agent_message = ('agent', '')
-            
-            st.markdown(f"<div class='user-message'>Usuário: {user_message[1]}</div>", unsafe_allow_html=True)
+        # Exibir pergunta antes da resposta
+        for i in range(0, len(chat_history), 2):
+            user_message = chat_history[i]
+            agent_message = chat_history[i+1] if i+1 < len(chat_history) else ('agent', '')
             st.markdown(f"<div class='agent-message'>Agente: {agent_message[1]}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='user-message'>Usuário: {user_message[1]}</div>", unsafe_allow_html=True)
 
-# Script para tornar a barra lateral responsiva em dispositivos móveis e ajustar a altura do textarea
+# Script para tornar a barra lateral responsiva em dispositivos móveis
 st.markdown("""
 <script>
-    function adjustInputSize() {
-        const input = document.querySelector('.stTextInput input, .stTextArea textarea');
-        if (input) {
-            if (input.value.includes('\\n') || input.value.length > 50) {
-                input.classList.remove('small-input');
-                input.classList.add('large-input');
-            } else {
-                input.classList.remove('large-input');
-                input.classList.add('small-input');
-            }
-        }
-    }
-
-    // Chamar a função quando o DOM estiver carregado
-    document.addEventListener('DOMContentLoaded', adjustInputSize);
-
-    // Observar mudanças no DOM
-    const observer = new MutationObserver(adjustInputSize);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Adicionar listener para input
-    document.body.addEventListener('input', function(e) {
-        if (e.target.matches('.stTextInput input, .stTextArea textarea')) {
-            adjustInputSize();
-        }
-    });
-
     var sidebar = document.querySelector('.sidebar');
     var sidebarToggle = document.createElement('button');
     sidebarToggle.textContent = '☰';
