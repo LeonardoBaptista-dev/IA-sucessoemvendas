@@ -4,7 +4,7 @@ import streamlit as st
 st.set_page_config(page_title='Consultor da Sucesso em Vendas', layout="wide")
 
 # Resto das importações
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleAuthProvider
 from langchain.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 import json
@@ -74,7 +74,19 @@ except Exception as e:
 
 # Inicializar o modelo Gemini com as credenciais carregadas
 try:
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3, credentials=credentials)
+    # Crie um GoogleAuthProvider personalizado
+    auth_provider = GoogleAuthProvider(
+        credentials=credentials,
+        project_id=project_id,
+        root_url="https://generativelanguage.googleapis.com/v1beta/"
+    )
+
+    # Inicialize o modelo Gemini com o auth_provider personalizado
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-pro",
+        temperature=0.3,
+        auth_provider=auth_provider
+    )
     logger.info("Modelo Gemini inicializado com sucesso")
 except Exception as e:
     logger.error(f"Erro ao inicializar o modelo Gemini: {e}")
