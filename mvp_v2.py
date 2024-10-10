@@ -1,5 +1,5 @@
 import streamlit as st
-# Configurar Streamlit (movido para o topo absoluto)
+
 st.set_page_config(page_title='Consultor da Sucesso em Vendas', layout="wide")
 
 # Resto das importações
